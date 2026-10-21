@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Мастер - Проверка знаний</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #004e92 0%, #0077b6 40%, #90e0ef 80%, #ffffff 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 50, 100, 0.2);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 { font-size: 2.2em; margin-bottom: 10px; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); }
+        .header p { font-size: 1.1em; opacity: 0.95; }
+
+        .screen { display: none; padding: 40px; }
+        .screen.active { display: block; }
+
+        .start-screen { text-align: center; }
+
+        .name-input {
+            padding: 15px 20px;
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #d4e6f1;
+            border-radius: 12px;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .name-input:focus { border-color: #0077b6; }
+
+        .difficulty-selector {
+            display: flex; gap: 20px; justify-content: center; margin: 20px 0; flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            padding: 20px 30px; font-size: 1.1em; border: none; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s; font-weight: bold; min-width: 180px;
+            color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .difficulty-btn.easy { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #004e92; }
+        .difficulty-btn.medium { background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%); }
+        .difficulty-btn.hard { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .difficulty-btn:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+
+        .game-info {
+            display: flex; justify-content: space-between; margin-bottom: 25px;
+            padding: 15px 25px; background: #f0f8ff; border-radius: 12px; border: 1px solid #d4e6f1;
+        }
+        .info-item { display: flex; flex-direction: column; align-items: center; }
+        .info-label { font-size: 0.85em; color: #5d6d7e; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .info-value { font-size: 1.6em; font-weight: bold; color: #004e92; }
+        .timer { color: #e74c3c; }
+
+        .progress-container { width: 100%; height: 8px; background: #d4e6f1; border-radius: 4px; margin-bottom: 30px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #f39c12 0%, #f1c40f 100%); transition: width 0.4s ease; }
+
+        .question-container {
+            background: #ffffff; padding: 30px; border-radius: 15px; margin-bottom: 25px;
+            border-left: 6px solid #0077b6; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .question-text { font-size: 1.25em; color: #2c3e50; line-height: 1.5; font-weight: 600; }
+
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .option-btn {
+            padding: 18px 20px; background: white; border: 2px solid #d4e6f1; border-radius: 10px;
+            cursor: pointer; transition: all 0.25s; font-size: 1.05em; color: #2c3e50; text-align: left; font-weight: 500;
+        }
+        .option-btn:hover:not(:disabled) { background: #0077b6; color: white; border-color: #0077b6; transform: translateX(5px); }
+        .option-btn.correct { background: #2ecc71; border-color: #2ecc71; color: white; animation: pulse 0.5s; }
+        .option-btn.wrong { background: #e74c3c; border-color: #e74c3c; color: white; animation: shake 0.5s; }
+        .option-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+        .result-screen { text-align: center; }
+        .grade-display { font-size: 5em; font-weight: bold; margin: 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        .grade-negative { color: #e74c3c; }
+        .grade-bad { color: #e67e22; }
+        .grade-ok { color: #f39c12; }
+        .grade-good { color: #0077b6; }
+        .grade-excellent { color: #27ae60; }
+
+        .result-title { font-size: 2em; color: #2c3e50; margin-bottom: 10px; }
+        .result-subtitle { font-size: 1.1em; color: #7f8c8d; margin-bottom: 30px; }
+
+        .result-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin: 30px 0; }
+        .stat-card { background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%); padding: 20px; border-radius: 12px; color: white; }
+        .stat-value { font-size: 2em; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 0.85em; opacity: 0.9; }
+
+        .action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+        
+        .download-btn {
+            padding: 18px 35px; font-size: 1.1em;
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white; border: none; border-radius: 10px; cursor: pointer;
+            transition: all 0.3s; font-weight: bold; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+        .restart-btn {
+            padding: 18px 35px; font-size: 1.1em;
+            background: linear-gradient(135deg, #004e92 0%, #0077b6 100%);
+            color: white; border: none; border-radius: 10px; cursor: pointer;
+            transition: all 0.3s; font-weight: bold;
+        }
+        .download-btn:hover, .restart-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); }
+
+        .email-note {
+            font-size: 0.9em; color: #5d6d7e; margin-top: 20px; line-height: 1.5;
+            background: #f0f8ff; padding: 15px; border-radius: 10px; border: 1px dashed #0077b6;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.6em; }
+            .game-info { flex-direction: column; gap: 15px; }
+            .options-grid { grid-template-columns: 1fr; }
+            .grade-display { font-size: 4em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Excel Мастер</h1>
+            <p>Проверка знаний функций и инструментов Excel</p>
+        </div>
+
+        <!-- Стартовый экран -->
+        <div id="start-screen" class="screen start-screen active">
+            <h2 style="color: #004e92; margin-bottom: 15px;">Введите ваше имя</h2>
+            <input type="text" id="player-name" class="name-input" placeholder="Иванов Иван Иванович" maxlength="50">
+            
+            <h3 style="color: #004e92; margin-bottom: 15px;">Выберите уровень сложности</h3>
+            <div class="difficulty-selector">
+                <button class="difficulty-btn easy" onclick="startGame('easy')">
+                    🟢 Легкий<br><small style="font-weight:normal; font-size:0.8em">Оценка: от 0 до 5</small>
+                </button>
+                <button class="difficulty-btn medium" onclick="startGame('medium')">
+                    🟡 Средний<br><small style="font-weight:normal; font-size:0.8em">Оценка: от 1 до 8</small>
+                </button>
+                <button class="difficulty-btn hard" onclick="startGame('hard')">
+                    🔴 Сложный<br><small style="font-weight:normal; font-size:0.8em">Оценка: от 1 до 10</small>
+                </button>
+            </div>
+            <p style="color: #5d6d7e; margin-top: 20px; line-height: 1.6;">
+                ⏱️ Время: 30 минут | 📝 15 вопросов | 📥 Отчет скачивается в Excel
+            </p>
+        </div>
+
+        <!-- Игровой экран -->
+        <div id="game-screen" class="screen">
+            <div class="game-info">
+                <div class="info-item">
+                    <div class="info-label">Вопрос</div>
+                    <div class="info-value" id="question-counter">1/15</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Очки</div>
+                    <div class="info-value" id="score">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Время</div>
+                    <div class="info-value timer" id="timer">30:00</div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+
+            <div class="question-container">
+                <div class="question-text" id="question-text"></div>
+            </div>
+
+            <div class="options-grid" id="options-container"></div>
+        </div>
+
+        <!-- Экран результатов -->
+        <div id="result-screen" class="screen result-screen">
+            <div class="grade-display" id="grade-display">10</div>
+            <h2 class="result-title" id="result-title">Отлично!</h2>
+            <p class="result-subtitle" id="result-subtitle">Вы превосходно знаете Excel</p>
+            
+            <div class="result-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="correct-answers">0/15</div>
+                    <div class="stat-label">Правильных</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="accuracy">0%</div>
+                    <div class="stat-label">Точность</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="time-spent">0:00</div>
+                    <div class="stat-label">Время</div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="download-btn" onclick="downloadReport()">💾 Скачать отчет в Excel</button>
+                <button class="restart-btn" onclick="location.reload()">🔄 Пройти заново</button>
+            </div>
+            
+            <div class="email-note">
+                📧 <strong>Как отправить результат:</strong><br>
+                1. Нажмите кнопку выше, чтобы скачать файл <code>.xls</code>.<br>
+                2. Откройте свою почту и создайте новое письмо на адрес:<br>
+                <strong style="color: #004e92; font-size: 1.1em;">anvikst2020@gmail.com</strong><br>
+                3. Прикрепите скачанный файл к письму и нажмите "Отправить".
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questionsDB = {
+            easy: [
+                { text: "Какая функция используется для вертикального поиска значения в таблице?", correct: "ВПР", options: ["ВПР", "ГПР", "ИНДЕКС", "ПОИСКПОЗ"] },
+                { text: "Какая функция находит значение по номеру строки и столбца?", correct: "ИНДЕКС", options: ["ИНДЕКС", "АДРЕС", "ВПР", "ПОИСКПОЗ"] },
+                { text: "Какая функция суммирует значения по одному условию?", correct: "СУММЕСЛИ", options: ["СУММЕСЛИ", "СУММ", "СУММЕСЛИМН", "СЧЁТЕСЛИ"] },
+                { text: "Какая функция подсчитывает количество ячеек по одному условию?", correct: "СЧЁТЕСЛИ", options: ["СЧЁТЕСЛИ", "СЧЁТ", "СЧЁТЕСЛИМН", "СУММЕСЛИ"] },
+                { text: "Какая функция возвращает номер позиции элемента в диапазоне?", correct: "ПОИСКПОЗ", options: ["ПОИСКПОЗ", "ИНДЕКС", "СТРОКА", "СТОЛБЕЦ"] },
+                { text: "Какая функция используется для горизонтального поиска?", correct: "ГПР", options: ["ГПР", "ВПР", "ТРАНСП", "ИНДЕКС"] },
+                { text: "Какая функция вычисляет среднее значение по условию?", correct: "СРЗНАЧЕСЛИ", options: ["СРЗНАЧЕСЛИ", "СРЗНАЧ", "СУММЕСЛИ", "СЧЁТЕСЛИ"] },
+                { text: "Какая логическая функция используется для проверки условия?", correct: "ЕСЛИ", options: ["ЕСЛИ", "И", "ИЛИ", "НЕ"] },
+                { text: "Какой инструмент используется для создания сводных отчетов из больших данных?", correct: "Сводные таблицы", options: ["Сводные таблицы", "Консолидация", "Фильтр", "Сортировка"] },
+                { text: "Какой инструмент упорядочивает данные по возрастанию или убыванию?", correct: "Сортировка", options: ["Сортировка", "Фильтр", "Сводные таблицы", "Консолидация"] },
+                { text: "Какая функция возвращает номер текущей строки?", correct: "СТРОКА", options: ["СТРОКА", "СТОЛБЕЦ", "АДРЕС", "ИНДЕКС"] },
+                { text: "Какая математическая функция округляет число до ближайшего целого?", correct: "ОКРУГЛ", options: ["ОКРУГЛ", "ЦЕЛОЕ", "ОКРВВЕРХ", "ОКРВНИЗ"] },
+                { text: "Какая функция возвращает номер текущего столбца?", correct: "СТОЛБЕЦ", options: ["СТОЛБЕЦ", "СТРОКА", "АДРЕС", "ИНДЕКС"] },
+                { text: "Какая функция возвращает максимальное значение по условию?", correct: "МАКСЕСЛИ", options: ["МАКСЕСЛИ", "МАКС", "НАИБОЛЬШИЙ", "СУММЕСЛИ"] },
+                { text: "Какой инструмент объединяет данные из нескольких диапазонов?", correct: "Консолидация", options: ["Консолидация", "Сводные таблицы", "Сортировка", "ВПР"] }
+            ],
+            medium: [
+                { text: "Какая комбинация функций заменяет ВПР для левого поиска?", correct: "ИНДЕКС + ПОИСКПОЗ", options: ["ИНДЕКС + ПОИСКПОЗ", "ВПР + ЕСЛИ", "ГПР + ИНДЕКС", "ПОИСКПОЗ + АДРЕС"] },
+                { text: "Какая функция суммирует значения по нескольким условиям?", correct: "СУММЕСЛИМН", options: ["СУММЕСЛИМН", "СУММЕСЛИ", "СЧЁТЕСЛИМН", "СУММ"] },
+                { text: "Какая функция подсчитывает количество по нескольким условиям?", correct: "СЧЁТЕСЛИМН", options: ["СЧЁТЕСЛИМН", "СЧЁТЕСЛИ", "СУММЕСЛИМН", "СЧЁТ"] },
+                { text: "Какая функция возвращает текстовый адрес ячейки по номерам строки и столбца?", correct: "АДРЕС", options: ["АДРЕС", "ССЫЛКА", "ЯЧЕЙКА", "ДВССЫЛ"] },
+                { text: "Какая функция транспонирует данные (строки в столбцы)?", correct: "ТРАНСП", options: ["ТРАНСП", "ПОВОРОТ", "ЗАМЕНИТЬ", "ПРЕОБРАЗОВАТЬ"] },
+                { text: "Как правильно использовать ВПР для точного совпадения?", correct: "Указать 0 или ЛОЖЬ в последнем аргументе", options: ["Указать 0 или ЛОЖЬ в последнем аргументе", "Указать 1 или ИСТИНА в последнем аргументе", "Не указывать последний аргумент", "Использовать ГПР вместо ВПР"] },
+                { text: "Какая формула вернет сумму продаж только для товара 'Ноутбук'?", correct: "=СУММЕСЛИ(A:A;\"Ноутбук\";B:B)", options: ["=СУММЕСЛИ(A:A;\"Ноутбук\";B:B)", "=СУММ(A:A;B:B)", "=СУММЕСЛИМН(A:A;B:B)", "=СЧЁТЕСЛИ(A:A;\"Ноутбук\")"] },
+                { text: "Какая формула подсчитает количество заказов со статусом 'Оплачено'?", correct: "=СЧЁТЕСЛИ(A:A;\"Оплачено\")", options: ["=СЧЁТЕСЛИ(A:A;\"Оплачено\")", "=СЧЁТ(A:A)", "=СУММЕСЛИ(A:A;\"Оплачено\")", "=СЧЁТЕСЛИМН(A:A;B:B)"] },
+                { text: "Какая формула вернет среднюю зарплату в отделе 'Продажи'?", correct: "=СРЗНАЧЕСЛИ(A:A;\"Продажи\";B:B)", options: ["=СРЗНАЧЕСЛИ(A:A;\"Продажи\";B:B)", "=СРЗНАЧ(B:B)", "=СУММЕСЛИ(A:A;\"Продажи\";B:B)", "=СРЗНАЧЕСЛИМН(A:A;B:B)"] },
+                { text: "Какая формула правильно использует ЕСЛИ для проверки условия?", correct: "=ЕСЛИ(A1>100;\"Много\";\"Мало\")", options: ["=ЕСЛИ(A1>100;\"Много\";\"Мало\")", "=ЕСЛИ(A1>100;Много;Мало)", "=ЕСЛИ(A1>100;\"Много\")", "=ЕСЛИ(A1>100;;\"Мало\")"] },
+                { text: "Какая математическая функция возвращает остаток от деления?", correct: "ОСТАТ", options: ["ОСТАТ", "ДЕЛЕНИЕ", "МОДУЛЬ", "ЧАСТНОЕ"] },
+                { text: "Какая функция возвращает абсолютное значение числа (модуль)?", correct: "ABS", options: ["ABS", "МОДУЛЬ", "ОСТАТ", "ЗНАК"] },
+                { text: "Какая функция округляет число вверх до указанного количества знаков?", correct: "ОКРВВЕРХ", options: ["ОКРВВЕРХ", "ОКРУГЛ", "ОКРВНИЗ", "ЦЕЛОЕ"] },
+                { text: "Какой инструмент лучше всего подходит для интерактивного анализа данных по категориям?", correct: "Сводные таблицы", options: ["Сводные таблицы", "Сортировка", "Фильтр", "Формулы"] },
+                { text: "Какая формула вернет сумму значений, если дата в столбце A соответствует январю 2024?", correct: "=СУММЕСЛИМН(B:B;A:A;\">=\"&ДАТА(2024;1;1);A:A;\"<=\"&ДАТА(2024;1;31))", options: ["=СУММЕСЛИМН(B:B;A:A;\">=\"&ДАТА(2024;1;1);A:A;\"<=\"&ДАТА(2024;1;31))", "=СУММЕСЛИ(A:A;\"Январь\";B:B)", "=СУММ(B:B)", "=СРЗНАЧЕСЛИ(A:A;\"2024\";B:B)"] }
+            ],
+            hard: [
+                { text: "Какая формула найдет цену товара по названию, если название в столбце B, а цена в столбце A?", correct: "=ИНДЕКС(A:A;ПОИСКПОЗ(\"Товар\";B:B;0))", options: ["=ИНДЕКС(A:A;ПОИСКПОЗ(\"Товар\";B:B;0))", "=ВПР(\"Товар\";A:B;2;0)", "=ГПР(\"Товар\";A:B;2;0)", "=ПОИСКПОЗ(\"Товар\";B:B;0)"] },
+                { text: "Какая формула подсчитает сумму продаж для менеджера 'Иван' и товара 'Ноутбуки'?", correct: "=СУММЕСЛИМН(C:C;A:A;\"Иван\";B:B;\"Ноутбуки\")", options: ["=СУММЕСЛИМН(C:C;A:A;\"Иван\";B:B;\"Ноутбуки\")", "=СУММЕСЛИ(A:A;\"Иван\";C:C)", "=СУММ(C:C)", "=СЧЁТЕСЛИМН(A:A;\"Иван\";B:B;\"Ноутбуки\")"] },
+                { text: "Какая формула вернет значение из ячейки, адрес которой получен функцией АДРЕС(5;3)?", correct: "=ДВССЫЛ(АДРЕС(5;3))", options: ["=ДВССЫЛ(АДРЕС(5;3))", "=АДРЕС(5;3)", "=ИНДЕКС(5;3)", "=ССЫЛКА(АДРЕС(5;3))"] },
+                { text: "Какая формула вернет номер строки, в которой находится слово 'Итог' в столбце A?", correct: "=ПОИСКПОЗ(\"Итог\";A:A;0)", options: ["=ПОИСКПОЗ(\"Итог\";A:A;0)", "=СТРОКА(ПОИСКПОЗ(\"Итог\";A:A;0))", "=АДРЕС(ПОИСКПОЗ(\"Итог\";A:A;0);1)", "=ИНДЕКС(A:A;ПОИСКПОЗ(\"Итог\";A:A;0))"] },
+                { text: "Какая формула вернет количество уникальных значений в диапазоне A1:A100?", correct: "=СУММПРОИЗВ(1/СЧЁТЕСЛИ(A1:A100;A1:A100))", options: ["=СУММПРОИЗВ(1/СЧЁТЕСЛИ(A1:A100;A1:A100))", "=СЧЁТЕСЛИ(A1:A100;\"*\")", "=СЧЁТ(A1:A100)", "=СЧЁТЕСЛИМН(A1:A100;\"<>\")"] },
+                { text: "Какая формула вернет второе по величине значение в диапазоне?", correct: "=НАИБОЛЬШИЙ(A1:A100;2)", options: ["=НАИБОЛЬШИЙ(A1:A100;2)", "=МАКС(A1:A100)-МИН(A1:A100)", "=ИНДЕКС(A1:A100;2)", "=ПОИСКПОЗ(2;A1:A100;0)"] },
+                { text: "Какая формула вернет сумму всех чисел, кратных 5, в диапазоне A1:A100?", correct: "=СУММПРОИЗВ((ОСТАТ(A1:A100;5)=0)*A1:A100)", options: ["=СУММПРОИЗВ((ОСТАТ(A1:A100;5)=0)*A1:A100)", "=СУММЕСЛИ(A1:A100;\"*5*\")", "=СУММ(A1:A100)/5", "=СЧЁТЕСЛИ(A1:A100;\"*5*\")*5"] },
+                { text: "Какая формула преобразует текстовую дату '2024-01-15' в числовой формат даты?", correct: "=ДАТАЗНАЧ(A1)", options: ["=ДАТАЗНАЧ(A1)", "=ТЕКСТ(A1;\"ДД.ММ.ГГГГ\")", "=ЗНАЧЕН(A1)", "=ПРЕОБР(A1)"] },
+                { text: "Какая формула вернет сумму продаж только по рабочим дням (Пн-Пт)?", correct: "=СУММПРОИЗВ((ДЕНЬНЕД(A1:A100;2)<6)*B1:B100)", options: ["=СУММПРОИЗВ((ДЕНЬНЕД(A1:A100;2)<6)*B1:B100)", "=СУММЕСЛИ(A1:A100;\"<>Сб\";B1:B100)", "=СУММ(B1:B100)", "=СРЗНАЧЕСЛИ(A1:A100;\"Рабочий\";B1:B100)"] },
+                { text: "Какая формула вернет адрес ячейки с максимальным значением в диапазоне A1:A100?", correct: "=АДРЕС(ПОИСКПОЗ(МАКС(A1:A100);A1:A100;0);1)", options: ["=АДРЕС(ПОИСКПОЗ(МАКС(A1:A100);A1:A100;0);1)", "=МАКС(A1:A100)", "=ИНДЕКС(A1:A100;МАКС(A1:A100))", "=ССЫЛКА(МАКС(A1:A100))"] },
+                { text: "Какая формула вернет среднее значение только для положительных чисел в диапазоне?", correct: "=СРЗНАЧЕСЛИ(A1:A100;\">0\")", options: ["=СРЗНАЧЕСЛИ(A1:A100;\">0\")", "=СРЗНАЧ(A1:A100)", "=СУММЕСЛИ(A1:A100;\">0\")/СЧЁТЕСЛИ(A1:A100;\">0\")", "=СРЗНАЧЕСЛИМН(A1:A100;\">0\")"] },
+                { text: "Какая формула вернет количество заказов, где сумма > 1000 И статус 'Оплачено'?", correct: "=СЧЁТЕСЛИМН(A:A;\">1000\";B:B;\"Оплачено\")", options: ["=СЧЁТЕСЛИМН(A:A;\">1000\";B:B;\"Оплачено\")", "=СЧЁТЕСЛИ(A:A;\">1000\")+СЧЁТЕСЛИ(B:B;\"Оплачено\")", "=СУММЕСЛИМН(A:A;\">1000\";B:B;\"Оплачено\")", "=СЧЁТ(A:A)*СЧЁТ(B:B)"] },
+                { text: "Какая формула вернет текст 'Высокий', если > 100, 'Средний', если > 50, иначе 'Низкий'?", correct: "=ЕСЛИ(A1>100;\"Высокий\";ЕСЛИ(A1>50;\"Средний\";\"Низкий\"))", options: ["=ЕСЛИ(A1>100;\"Высокий\";ЕСЛИ(A1>50;\"Средний\";\"Низкий\"))", "=ЕСЛИ(A1>100;\"Высокий\";\"Средний\";\"Низкий\")", "=ВЫБОР(A1;\"Высокий\";\"Средний\";\"Низкий\")", "=ЕСЛИМН(A1>100;\"Высокий\";A1>50;\"Средний\";ИСТИНА;\"Низкий\")"] },
+                { text: "Какая формула корректно транспонирует таблицу из диапазона A1:C3?", correct: "=ТРАНСП(A1:C3)", options: ["=ТРАНСП(A1:C3)", "=ПОВОРОТ(A1:C3)", "=ИНДЕКС(A1:C3;СТРОКА();СТОЛБЕЦ())", "=ЗАМЕНИТЬ(A1:C3)"] },
+                { text: "Какая формула вернет значение из таблицы, если заголовки столбцов и строк заданы текстом?", correct: "=ИНДЕКС(данные;ПОИСКПОЗ(строка;заголовки_строк;0);ПОИСКПОЗ(столбец;заголовки_столбцов;0))", options: ["=ИНДЕКС(данные;ПОИСКПОЗ(строка;заголовки_строк;0);ПОИСКПОЗ(столбец;заголовки_столбцов;0))", "=ВПР(строка;данные;ПОИСКПОЗ(столбец;заголовки;0);0)", "=ГПР(столбец;данные;ПОИСКПОЗ(строка;заголовки;0);0)", "=СУММЕСЛИМН(данные;строка;столбец)"] }
+            ]
+        };
+
+        let currentDifficulty = 'easy';
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let correctAnswers = 0;
+        let timerInterval;
+        let timeLeft = 30 * 60;
+        let startTime;
+        let finalGrade = 0;
+        let maxGrade = 10;
+        let playerName = "Не указано";
+
+        function startGame(difficulty) {
+            const nameInput = document.getElementById('player-name').value.trim();
+            playerName = nameInput || "Не указано";
+            
+            currentDifficulty = difficulty;
+            questions = getRandomQuestions(difficulty, 15);
+            currentQuestionIndex = 0;
+            score = 0;
+            correctAnswers = 0;
+            timeLeft = 30 * 60;
+            startTime = Date.now();
+
+            // Установка максимального балла в зависимости от сложности
+            if (difficulty === 'easy') maxGrade = 5;
+            else if (difficulty === 'medium') maxGrade = 8;
+            else maxGrade = 10;
+
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+
+            startTimer();
+            loadQuestion();
+        }
+
+        function getRandomQuestions(difficulty, count) {
+            const allQuestions = [...questionsDB[difficulty]];
+            const shuffled = allQuestions.sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, Math.min(count, allQuestions.length));
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                endGame();
+                return;
+            }
+
+            const q = questions[currentQuestionIndex];
+            document.getElementById('question-text').textContent = q.text;
+            document.getElementById('question-counter').textContent = 
+                `${currentQuestionIndex + 1}/${questions.length}`;
+            
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            shuffledOptions.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option;
+                btn.onclick = () => checkAnswer(btn, option, q.correct);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(btn, selected, correct) {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => b.disabled = true);
+
+            if (selected === correct) {
+                btn.classList.add('correct');
+                score += getPointsForDifficulty();
+                correctAnswers++;
+            } else {
+                btn.classList.add('wrong');
+                buttons.forEach(b => {
+                    if (b.textContent === correct) b.classList.add('correct');
+                });
+            }
+
+            document.getElementById('score').textContent = score;
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 1200);
+        }
+
+        function getPointsForDifficulty() {
+            switch(currentDifficulty) {
+                case 'easy': return 10;
+                case 'medium': return 20;
+                case 'hard': return 30;
+                default: return 10;
+            }
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            
+            const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(timeSpent / 60);
+            const seconds = timeSpent % 60;
+            
+            const percentage = correctAnswers / questions.length;
+            
+            // Расчет оценки в зависимости от уровня сложности
+            let rawGrade = Math.round(percentage * maxGrade);
+            
+            if (currentDifficulty === 'easy') {
+                finalGrade = Math.max(0, Math.min(5, rawGrade)); // от 0 до 5
+            } else if (currentDifficulty === 'medium') {
+                finalGrade = Math.max(1, Math.min(8, rawGrade)); // от 1 до 8
+            } else {
+                finalGrade = Math.max(1, Math.min(10, rawGrade)); // от 1 до 10
+            }
+
+            const accuracy = Math.round(percentage * 100);
+
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('result-screen').classList.add('active');
+
+            const gradeDisplay = document.getElementById('grade-display');
+            gradeDisplay.textContent = finalGrade;
+            
+            let title, subtitle, gradeClass;
+
+            // Адаптивная оценка в зависимости от сложности
+            if (currentDifficulty === 'easy') {
+                if (finalGrade <= 1) { gradeClass = 'grade-negative'; title = 'Неудовлетворительно'; subtitle = 'Отрицательная оценка (0-1). Рекомендуется повторить базовые функции.'; }
+                else if (finalGrade <= 3) { gradeClass = 'grade-ok'; title = 'Удовлетворительно'; subtitle = 'Базовые знания есть, но нужно больше практики.'; }
+                else { gradeClass = 'grade-excellent'; title = 'Хорошо / Отлично'; subtitle = 'Вы хорошо усвоили базовый материал!'; }
+            } 
+            else if (currentDifficulty === 'medium') {
+                if (finalGrade <= 3) { gradeClass = 'grade-negative'; title = 'Неудовлетворительно'; subtitle = 'Отрицательная оценка (1-3). Стоит подтянуть комбинированные функции.'; }
+                else if (finalGrade <= 5) { gradeClass = 'grade-ok'; title = 'Удовлетворительно'; subtitle = 'Базовые знания есть, но есть пробелы.'; }
+                else if (finalGrade <= 7) { gradeClass = 'grade-good'; title = 'Хорошо'; subtitle = 'Хороший результат! Вы уверенно владеете средним уровнем.'; }
+                else { gradeClass = 'grade-excellent'; title = 'Отлично!'; subtitle = 'Превосходно! Вы мастерски решаете задачи средней сложности.'; }
+            } 
+            else { // hard
+                if (finalGrade <= 3) { gradeClass = 'grade-negative'; title = 'Неудовлетворительно'; subtitle = 'Отрицательная оценка (1-3). Рекомендуется углубленно изучить продвинутые формулы.'; }
+                else if (finalGrade <= 5) { gradeClass = 'grade-bad'; title = 'Плохо'; subtitle = 'Есть серьезные пробелы в знаниях продвинутых функций.'; }
+                else if (finalGrade <= 7) { gradeClass = 'grade-ok'; title = 'Удовлетворительно'; subtitle = 'Неплохо для сложного уровня, но есть куда расти.'; }
+                else if (finalGrade <= 9) { gradeClass = 'grade-good'; title = 'Хорошо'; subtitle = 'Отличный результат! Вы хорошо знаете сложные функции Excel.'; }
+                else { gradeClass = 'grade-excellent'; title = 'Отлично!'; subtitle = 'Превосходно! Вы настоящий гуру Excel.'; }
+            }
+
+            gradeDisplay.className = `grade-display ${gradeClass}`;
+            document.getElementById('result-title').textContent = title;
+            document.getElementById('result-subtitle').textContent = subtitle;
+            document.getElementById('correct-answers').textContent = `${correctAnswers}/${questions.length}`;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            document.getElementById('time-spent').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function downloadReport() {
+            const difficultyText = currentDifficulty === 'easy' ? 'Легкий (макс. 5)' : 
+                                   currentDifficulty === 'medium' ? 'Средний (макс. 8)' : 'Сложный (макс. 10)';
+            const accuracy = Math.round((correctAnswers / questions.length) * 100);
+            const timeSpent = document.getElementById('time-spent').textContent;
+            const date = new Date().toLocaleString('ru-RU');
+            
+            let gradeColor = '#000000';
+            if (finalGrade <= 3) gradeColor = '#e74c3c';
+            else if (finalGrade >= (maxGrade * 0.8)) gradeColor = '#27ae60'; // 80% и выше от максимума
+            else if (finalGrade >= (maxGrade * 0.6)) gradeColor = '#f39c12';
+
+            const htmlContent = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        td, th { padding: 10px; border: 1px solid #bdc3c7; text-align: left; font-family: Arial, sans-serif; }
+                        th { background-color: #0077b6; color: white; font-weight: bold; }
+                        .title { font-size: 16pt; font-weight: bold; color: #004e92; margin-bottom: 10px; }
+                        .grade { font-size: 14pt; font-weight: bold; color: ${gradeColor}; }
+                    </style>
+                </head>
+                <body>
+                    <div class="title">Результаты тестирования по Excel</div>
+                    <table>
+                        <tr><th>Параметр</th><th>Значение</th></tr>
+                        <tr><td>Дата и время</td><td>${date}</td></tr>
+                        <tr><td>ФИО Участника</td><td>${playerName}</td></tr>
+                        <tr><td>Уровень сложности</td><td>${difficultyText}</td></tr>
+                        <tr><td>Итоговая оценка</td><td class="grade">${finalGrade} из ${maxGrade}</td></tr>
+                        <tr><td>Правильных ответов</td><td>${correctAnswers} из ${questions.length}</td></tr>
+                        <tr><td>Точность</td><td>${accuracy}%</td></tr>
+                        <tr><td>Затраченное время</td><td>${timeSpent}</td></tr>
+                    </table>
+                    <br>
+                    <p style="color: #7f8c8d; font-size: 10pt;"><i>Этот файл сгенерирован автоматически в игре "Excel Мастер".</i></p>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\uFEFF' + htmlContent], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            const safeName = playerName.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_');
+            const fileName = `Результат_Excel_${safeName}_${new Date().toISOString().slice(0,10)}.xls`;
+            
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
